@@ -1,0 +1,30 @@
+name: Sync NocoDB Image
+
+on:
+  workflow_dispatch: # 允许你手动点击按钮触发同步
+  schedule:
+    - cron: '0 0 * * 1' # 每周一自动运行一次，保持最新
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }} # 自动生成，无需手动配置
+
+      - name: Pull and Push NocoDB
+        run: |
+          # 拉取官方镜像
+          docker pull nocodb/nocodb:latest
+          
+          # 将用户名转换为小写（GitHub 规定镜像路径必须小写）
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO=$(echo "${{ github.event.repository.name }}" | tr '[:upper:]' '[:lower:]')
+          
+          # 打标签并推送
+          docker tag nocodb/nocodb:latest ghcr.io/$OWNER/$REPO/nocodb:latest
+          docker push ghcr.io/$OWNER/$REPO/nocodb:latest
